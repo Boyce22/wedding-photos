@@ -12,7 +12,7 @@ Este projeto permite que os convidados compartilhem suas fotos do casamento de G
 ## 🛠️ Tecnologias Utilizadas
 
 - **Frontend:** React, Next.js, Tailwind CSS
-- **Backend:** Next.js API Routes, Node.js
+- **Backend:** Next.js API Routes
 - **Armazenamento:** MEGA.nz (megajs)
 - **Notificações:** react-hot-toast
 - **Gerenciamento de estado:** useState, useRef
