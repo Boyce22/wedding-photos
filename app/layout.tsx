@@ -1,5 +1,6 @@
 import type React from "react"
 import "@/styles/globals.css"
+import { Analytics } from '@vercel/analytics/next';
 import { Cormorant_Garamond, Montserrat } from "next/font/google"
 
 const montserrat = Montserrat({
@@ -20,7 +21,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className={`${montserrat.variable} ${cormorant.variable} font-sans`}>{children}</body>
+      <body className={`${montserrat.variable} ${cormorant.variable} font-sans`}>
+        {children}
+        <Analytics/>
+      </body>
     </html>
   )
 }

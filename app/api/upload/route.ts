@@ -1,5 +1,9 @@
 import { Storage } from 'megajs';
+import { randomUUID } from 'node:crypto';
 import { NextResponse, NextRequest } from 'next/server';
+
+
+const LIMITE_FOTOS = 15
 
 // Configurações do Storage
 const STORAGE_EMAIL = process.env.EMAIL_CASAMENTO_NZ;
@@ -38,7 +42,7 @@ async function createFolder(storage: Storage, userData: string): Promise<any> {
 
     const { firstName, lastName, createdAt } = JSON.parse(userData);
 
-    const folderName = `${firstName}-${lastName}-${createdAt}`;
+    const folderName = `${firstName.trim()}-${lastName.trim()}-${createdAt}`;
 
     const folderNameNz = storage.root.children?.find((child) => child.name === folderName);
 
@@ -47,7 +51,7 @@ async function createFolder(storage: Storage, userData: string): Promise<any> {
     }
 
     return folderNameNz
-    
+
   } catch (error) {
     console.error('Erro ao criar pasta:', error);
     throw new Error('Falha ao criar a pasta.');
@@ -87,13 +91,18 @@ async function uploadMultiplePhotos(storage: Storage, photos: string[], userData
   try {
     const folder = await createFolder(storage, userData);
 
-    const uploadPromises = photos.map((photo, index) => {
+    if (photos.length > LIMITE_FOTOS) {
+      throw new Error(`Limite de fotos excedido! Você pode enviar no máximo ${LIMITE_FOTOS} fotos.`);
+    }
+
+    const uploadPromises = photos.map((photo) => {
       const base64Data = photo.split(',')[1];
       const buffer = Buffer.from(base64Data, 'base64');
-      return folder.upload(`foto-${index + 1}.jpg`, buffer).complete;
+      return folder.upload(`foto-${randomUUID()}.jpg`, buffer).complete;
     });
 
-    await Promise.all(uploadPromises);
+    await Promise.all(uploadPromises)
+
     return `Fotos salvas com sucesso!`;
   } catch (error) {
     console.error('Erro ao fazer upload de múltiplas fotos:', error);

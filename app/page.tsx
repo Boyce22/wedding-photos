@@ -15,6 +15,7 @@ export default function App() {
   const [uploadStatus, setUploadStatus] = useState<string>("")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const multiFileInputRef = useRef<HTMLInputElement>(null)
+  const LIMITE_FOTOS = 15
 
   const handleFileRead = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -36,11 +37,25 @@ export default function App() {
 
   const handleMultiCameraCapture = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
-    if (files?.length) {
-      const fileReadPromises = Array.from(files).map((file) => handleFileRead(file))
-      const results = await Promise.all(fileReadPromises)
-      setPhotosArray(results)
-      setPhotoPreview(results[0])
+    try {
+      if (files?.length) {
+        if(files?.length > LIMITE_FOTOS) {
+          throw new Error(`Limite de fotos excedido! Você pode enviar no máximo ${LIMITE_FOTOS} fotos por vez.`);
+        }
+        const fileReadPromises = Array.from(files).map((file) => handleFileRead(file))
+        const results = await Promise.all(fileReadPromises)
+        setPhotosArray(results)
+        setPhotoPreview(results[0])
+      }
+    } catch (error) {
+      toast.error(error.message, {
+        duration: 4000,
+        position: "bottom-center",
+        style: {
+          background: "#f43f5e",
+          color: "#fff",
+        },
+      })
     }
   }
 
