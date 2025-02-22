@@ -1,21 +1,29 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef } from "react"
-import { Camera, Download, Heart, Linkedin, Instagram, Phone, Upload } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { Camera, Download, Heart, Linkedin, Instagram, Phone, Upload, Info } from "lucide-react"
 import axios from "axios"
 import { Button } from "@/components/ui/button"
 import toast, { Toaster } from "react-hot-toast"
 import { UserFormDialog } from "@/components/user-form"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 export default function App() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [photosArray, setPhotosArray] = useState<string[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [uploadStatus, setUploadStatus] = useState<string>("")
+  const [isPC, setIsPC] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const multiFileInputRef = useRef<HTMLInputElement>(null)
   const LIMITE_FOTOS = 15
+
+  useEffect(() => {
+    setIsPC(!/Mobi|Android/i.test(navigator.userAgent))
+  }, [])
 
   const handleFileRead = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -31,7 +39,7 @@ export default function App() {
     if (file) {
       const result = await handleFileRead(file)
       setPhotoPreview(result)
-      setPhotosArray([])
+      setPhotosArray([result])
     }
   }
 
@@ -39,8 +47,11 @@ export default function App() {
     const files = event.target.files
     try {
       if (files?.length) {
-        if(files?.length > LIMITE_FOTOS) {
-          throw new Error(`Limite de fotos excedido! Você pode enviar no máximo ${LIMITE_FOTOS} fotos por vez.`);
+        if (files?.length > LIMITE_FOTOS) {
+          throw new Error(`Limite de fotos excedido! Você pode enviar no máximo ${LIMITE_FOTOS} fotos por vez.`)
+        }
+        if (!isPC && files.length > 2) {
+          throw new Error("Para uma melhor experiência no celular, envie até 2 fotos por vez 📱")
         }
         const fileReadPromises = Array.from(files).map((file) => handleFileRead(file))
         const results = await Promise.all(fileReadPromises)
@@ -69,10 +80,10 @@ export default function App() {
   }
 
   const handleUpload = async () => {
-    if (!photosArray.length && !photoPreview) return
+    if (!photosArray.length) return
 
     setIsUploading(true)
-    setUploadStatus("Enviando foto(s)...")
+    setUploadStatus(`Enviando ${photosArray.length} foto${photosArray.length > 1 ? "s" : ""}...`)
 
     try {
       const userData = localStorage.getItem("userData")
@@ -80,25 +91,25 @@ export default function App() {
         throw new Error("Dados do usuário não encontrados")
       }
 
-      const photosToUpload = photosArray.length ? photosArray : [photoPreview as string]
-      const isMultiple = photosArray.length > 1
-
       const response = await axios.post("/api/upload", {
-        photos: photosToUpload,
-        isMultiple,
+        photos: photosArray,
+        isMultiple: photosArray.length > 1,
         userData,
       })
 
       setUploadStatus(response.data.message)
 
-      toast.success("Obrigado por compartilhar seu momento conosco! ❤️", {
-        duration: 4000,
-        position: "bottom-center",
-        style: {
-          background: "#f43f5e",
-          color: "#fff",
+      toast.success(
+        `Obrigado por compartilhar ${photosArray.length > 1 ? "seus momentos" : "seu momento"} conosco! ❤️`,
+        {
+          duration: 4000,
+          position: "bottom-center",
+          style: {
+            background: "#f43f5e",
+            color: "#fff",
+          },
         },
-      })
+      )
 
       setTimeout(() => {
         setIsUploading(false)
@@ -141,6 +152,8 @@ export default function App() {
           setPhotoPreview={setPhotoPreview}
           fileInputRef={fileInputRef}
           multiFileInputRef={multiFileInputRef}
+          isPC={isPC}
+          setIsPC={setIsPC}
         />
         <Footer />
       </main>
@@ -156,8 +169,10 @@ function Header() {
         <Heart className="w-5 h-5 text-rose-400 animate-pulse" />
         <div className="h-px w-12 bg-gradient-to-r from-transparent via-rose-300 to-transparent" />
       </div>
-      <h1 className="font-cormorant text-5xl md:text-7xl text-rose-900 mb-6 font-light tracking-wide">Gean & Mirian</h1>
-      <p className="text-rose-700/80 text-lg md:text-xl font-light tracking-wide">
+      <h1 className="font-cormorant text-4xl sm:text-5xl md:text-7xl text-rose-900 mb-6 font-light tracking-wide">
+        Gean & Mirian
+      </h1>
+      <p className="text-rose-700/80 text-base sm:text-lg md:text-xl font-light tracking-wide">
         Compartilhe seus momentos especiais
       </p>
     </div>
@@ -176,6 +191,8 @@ function PhotoUploadSection({
   setPhotoPreview,
   fileInputRef,
   multiFileInputRef,
+  isPC,
+  setIsPC,
 }: {
   photoPreview: string | null
   photosArray: string[]
@@ -188,13 +205,16 @@ function PhotoUploadSection({
   setPhotoPreview: (value: string | null) => void
   fileInputRef: React.RefObject<HTMLInputElement>
   multiFileInputRef: React.RefObject<HTMLInputElement>
+  isPC: boolean
+  setIsPC: (value: boolean) => void
 }) {
   return (
-    <div className="w-full max-w-md p-8 backdrop-blur-xl bg-white/60 shadow-xl border-rose-100/50 rounded-2xl transition-all duration-500">
+    <div className="w-full max-w-md p-4 sm:p-8 backdrop-blur-xl bg-white/60 shadow-xl border-rose-100/50 rounded-2xl transition-all duration-500">
       <div className="space-y-8">
         {photoPreview ? (
           <PhotoPreviewSection
             photoPreview={photoPreview}
+            photosArray={photosArray}
             handleDownload={handleDownload}
             handleUpload={handleUpload}
             isUploading={isUploading}
@@ -207,6 +227,8 @@ function PhotoUploadSection({
             handleMultiCameraCapture={handleMultiCameraCapture}
             fileInputRef={fileInputRef}
             multiFileInputRef={multiFileInputRef}
+            isPC={isPC}
+            setIsPC={setIsPC}
           />
         )}
       </div>
@@ -216,6 +238,7 @@ function PhotoUploadSection({
 
 function PhotoPreviewSection({
   photoPreview,
+  photosArray,
   handleDownload,
   handleUpload,
   isUploading,
@@ -223,6 +246,7 @@ function PhotoPreviewSection({
   setPhotoPreview,
 }: {
   photoPreview: string
+  photosArray: string[]
   handleDownload: () => void
   handleUpload: () => void
   isUploading: boolean
@@ -235,6 +259,9 @@ function PhotoPreviewSection({
         <div className="absolute inset-0 border-2 border-rose-200/50 rounded-xl" />
         <img src={photoPreview || "/placeholder.svg"} alt="Foto capturada" className="w-full h-full object-cover" />
       </div>
+      {photosArray.length > 1 && (
+        <p className="text-center text-rose-600 font-medium">{photosArray.length} fotos selecionadas</p>
+      )}
       <div className="flex flex-col sm:flex-row justify-center gap-4 w-full flex-wrap">
         <Button
           className="bg-rose-500 hover:bg-rose-600 transition-colors duration-300 shadow-lg hover:shadow-xl w-full sm:w-auto"
@@ -256,7 +283,7 @@ function PhotoPreviewSection({
           disabled={isUploading}
         >
           <Upload aria-disabled={isUploading} className="mr-2 h-4 w-4" />
-          {isUploading ? "Enviando..." : "Enviar Foto"}
+          {isUploading ? "Enviando..." : `Enviar Foto${photosArray.length > 1 ? "s" : ""}`}
         </Button>
       </div>
       {uploadStatus && (
@@ -273,11 +300,15 @@ function CameraCaptureSection({
   handleMultiCameraCapture,
   fileInputRef,
   multiFileInputRef,
+  isPC,
+  setIsPC,
 }: {
   handleCameraCapture: (event: React.ChangeEvent<HTMLInputElement>) => void
   handleMultiCameraCapture: (event: React.ChangeEvent<HTMLInputElement>) => void
   fileInputRef: React.RefObject<HTMLInputElement>
   multiFileInputRef: React.RefObject<HTMLInputElement>
+  isPC: boolean
+  setIsPC: (value: boolean) => void
 }) {
   return (
     <div className="space-y-6 animate-fade-in">
@@ -287,23 +318,43 @@ function CameraCaptureSection({
         </div>
         <p className="text-rose-700/80 font-light tracking-wide">Clique abaixo para capturar seu momento especial</p>
       </div>
-      <div className="flex flex-col sm:flex-row justify-center gap-4">
-        <FileInputButton
-          label="Tirar Foto"
-          onChange={handleCameraCapture}
-          icon={<Camera className="mr-2 h-4 w-4" />}
-          inputRef={fileInputRef}
-          accept="image/*"
-          capture="environment"
-        />
-        <FileInputButton
-          label="Adicionar Foto(s)"
-          onChange={handleMultiCameraCapture}
-          icon={<Camera className="mr-2 h-4 w-4" />}
-          inputRef={multiFileInputRef}
-          multiple
-          accept="image/*"
-        />
+      <div className="flex flex-col items-center gap-4 w-full">
+        <div className="flex flex-col sm:flex-row justify-center gap-4 w-full">
+          <FileInputButton
+            label="Tirar Foto"
+            onChange={handleCameraCapture}
+            icon={<Camera className="mr-2 h-4 w-4" />}
+            inputRef={fileInputRef}
+            accept="image/*"
+            capture="environment"
+            className="w-full sm:w-1/2"
+          />
+          <FileInputButton
+            label={isPC ? "Adicionar Fotos" : "Adicionar Foto"}
+            onChange={handleMultiCameraCapture}
+            icon={<Camera className="mr-2 h-4 w-4" />}
+            inputRef={multiFileInputRef}
+            multiple={isPC}
+            accept="image/*"
+            className="w-full sm:w-1/2"
+          />
+        </div>
+        <div className="flex items-center space-x-2 mt-4 w-full justify-center">
+          <Checkbox id="pc" checked={isPC} onCheckedChange={(checked) => setIsPC(checked as boolean)} />
+          <Label htmlFor="pc" className="text-sm text-rose-600/80">
+            Estou usando um computador
+          </Label>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="w-4 h-4 text-rose-400 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Marque esta opção se estiver usando um computador para enviar múltiplas fotos de uma vez.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
     </div>
   )
@@ -317,6 +368,8 @@ function FileInputButton({
   multiple = false,
   accept,
   capture,
+  className = "",
+  disabled = false,
 }: {
   label: string
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void
@@ -325,22 +378,26 @@ function FileInputButton({
   multiple?: boolean
   accept?: string
   capture?: string
+  className?: string
+  disabled?: boolean
 }) {
   return (
-    <div className="relative w-full sm:w-auto">
+    <div className={`relative ${className}`}>
       <input
         type="file"
         ref={inputRef}
         accept={accept}
         capture={capture}
+        multiple={multiple}
         onChange={onChange}
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         aria-label={label}
-        multiple={multiple}
+        disabled={disabled}
       />
       <Button
-        className="bg-rose-500 hover:bg-rose-600 transition-colors duration-300 shadow-lg hover:shadow-xl w-full sm:w-auto"
+        className="bg-rose-500 hover:bg-rose-600 transition-colors duration-300 shadow-lg hover:shadow-xl w-full"
         onClick={() => inputRef.current?.click()}
+        disabled={disabled}
       >
         {icon}
         {label}
